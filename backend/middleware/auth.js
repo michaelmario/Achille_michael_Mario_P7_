@@ -1,19 +1,28 @@
-// MODULES
-const dotenv = require('dotenv');
-// Récupère les variables d'environnement
+const dotenv = require("dotenv").config();
 const jwt = require("jsonwebtoken"); // Crée et check un token d'identification sécurisé
 
 // FIN MODULES
 
 // MIDDLEWARE AUTH
 module.exports = (req, res, next) => { // Vérifie si le token est bon
-    try { // Vérifie si le token est bon grâce à notre phrase secrète
-        const token = req.headers.authorization.split(" ")[1]; // Récupére le token dans l'entête
-        const decodedToken = jwt.verify(token, dotenv.TOKEN); // On vérifie le token avec la clé pour le lire
-        res.locals.userID = decodedToken.userID; // Le token devient un objet JS classique qu'on place dans une constante, et on y récupère l'user ID pour comparaison
-        next();
-    } catch{ // probleme d'autentification si erreur dans les inscrutions on renvoie le statut 401 non autorisé
-        res.status(401).json({message: 'Requête non authentifiée !'});
+ 
+  try {
+    if (!req.headers['authorization']) {
+      //S'assurer que l'utilisateur est connecté en recherchant les en-têtes d'autorisation
+      throw "Merci de vous connecter";
     }
-};
-// FIN MIDDLEWARE
+    // Recherche de la partie jeton des en-têtes d'autorisation
+    const token = req.headers['authorization'].split(" ")[1];
+    // Vérifier s'il correspond à la clé de jeton secrète
+    const decodedToken = jwt.verify(token, process.env.TOKEN);
+    const userId = decodedToken.userId;
+    
+    if (req.body.userId && req.body.userId !== userId) {
+      throw "userId non valable !";
+    } else {
+      next();
+    }
+  } catch (error) {
+    res.status(401).json({ error: error || "Requête non authentifiée !" });
+  }
+  }

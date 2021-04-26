@@ -4,6 +4,12 @@ const db = require('../config/database');
 
 
 const User = db.define("User", {
+  id:{
+    type: Sequelize.INTEGER, 
+     primaryKey: true,
+    autoIncrement: true,
+       allowNull: false
+  },
     name:{
       type: Sequelize.STRING, 
       allowNull: false,        
@@ -21,8 +27,13 @@ const User = db.define("User", {
        allowNull: false,
      },
      avatarUrl:{
-       type:Sequelize.STRING
+       type:Sequelize.STRING,
+       allowNull: true,
      },
+     bio:{
+      type:Sequelize.STRING,
+      allowNull: true,
+    },
      isAdmin: {
        type:Sequelize.BOOLEAN,
       flag: {allowNull: true, defaultValue: false },

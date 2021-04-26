@@ -8,10 +8,10 @@ const env = process.env.NODE_ENV || 'development';
 const config = require(__dirname + '/../config/config.json')[env];
 require('mysql2');
 const db = {};
-/*let db = new Sequelize({
+let db = new Sequelize({
   dialect: 'mysql',
-  dialectModule: 
-});*/
+ 
+});
 
 let sequelize;
 if (config.use_env_variable) {
