@@ -17,11 +17,16 @@ router.post("/signup", userCtrl.signup);
 router.post("/login", userCtrl.login);
 // Route d'authentification
 router.post("/me", userCtrl.me);
+// Récupérer tous les utilisateurs
+router.get("/users", auth, userCtrl.findAllUsers);
+
+// Récupérer un utilisateur
+router.get("/:id/profile", auth, userCtrl.getProfile);
 
 router.put("/:id", auth, userCtrl.updateUser);
-router.put("/profilePicture", auth, multer, userCtrl.updateProfilPicture )
-router.get("/users", auth, userCtrl.findAllUsers);
+router.put("/profilePicture", auth, multer, userCtrl.updateProfilPicture );
+
 // Delete a User with userId
-router.delete("/user/:userId", auth, userCtrl.deleteUser);
+router.delete("/:id", auth, userCtrl.deleteUser);
 
 module.exports = router;
