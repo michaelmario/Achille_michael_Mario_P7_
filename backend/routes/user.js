@@ -24,7 +24,7 @@ router.get("/users", auth, userCtrl.findAllUsers);
 router.get("/:id/profile", auth, userCtrl.getProfile);
 
 router.put("/:id", auth, userCtrl.updateUser);
-router.put("/profilePicture", auth, multer, userCtrl.updateProfilPicture );
+router.post("/:id", auth, userCtrl.updateProfilPicture);
 
 // Delete a User with userId
 router.delete("/:id", auth, userCtrl.deleteUser);

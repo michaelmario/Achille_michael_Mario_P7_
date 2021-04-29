@@ -1,32 +1,39 @@
-// MODULES
-const multer = require('multer');
-// FIN MODULES
+const multer = require("multer");
 
-// DICTIONNAIRE TYPE MIME
 const MIME_TYPES = {
-  'image/jpg': 'jpg',
-  'image/jpeg': 'jpeg',
-  'image/png': 'png',
-  'image/gif': 'gif',
-  'video/mp4': 'mp4'
+  "image/jpg": "jpg",
+  "image/jpeg": "jpg",
+  "image/png": "png",
 };
-// FIN DICTIONNAIRE
 
-// FONCTION STORAGE
-const storage = multer.diskStorage({ // Configure multer
-  destination: (req, file, callback) => { // Indique où enregistrer les fichiers
-    callback(null, 'images');
+const storage = multer.diskStorage({
+  // Création d'un objet de configuration pour multer
+  destination: (req, file, callback) => {
+    callback(null, "./images/");
   },
-  filename: (req, file, callback) => { // Indique le nom du fichier
-    let name = file.originalname.split(' ').join('_'); // Pour éliminer les éventuelles espaces du nom d'origine
-    let extension = MIME_TYPES[file.mimetype]; // Défini le type
-    name = name.replace("." + extension, "_"); // création du nom final
-    callback(null, name + Date.now() + '.' + extension); // Genère le nom complet du fichier- Nom d'origine + numero unique + . + extension
-  }
+  filename: (req, file, callback) => {
+    const name = file.originalname.split(".")[0].split(" ").join("_");
+    const extension = MIME_TYPES[file.mimetype];
+    //Créer un nom pour l'image
+    callback(null, name + Date.now() + "." + extension); 
+  },
 });
-// FIN FONCTION
 
-// Export de l'élément multer, seuls les fichiers de type image seront gérés
+const fileFilter = (req, file, callback) => {
+  const extension = MIME_TYPES[file.mimetype]; 
+  // Recherche du type mime du fichier téléchargé
+  if (extension === "jpg" || extension === "png") {
+     // S'assurer qu'il s'agit d'un png ou d'un jpg 
+    callback(null, true); 
+  } else {
+    callback("Erreur : Mauvais type de fichier", false);
+  }
+};
+
 module.exports = multer({
-  storage: storage
-}).single('image');
+  storage, // Ajout l'objet multer
+  //Définition d'une taille de fichier maximale à télécharger à 100 Mo
+  limits: { fileSize: 104857600 }, 
+  //Application du filtre d'extension
+  fileFilter,
+}).single("image"); // S'assurer que le fichier téléchargé par l'utilisateur est un fichier unique et non plusieurs

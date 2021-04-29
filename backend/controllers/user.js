@@ -7,11 +7,41 @@ const bcrypt = require('bcrypt'); // Pour crypter le mot de passe
 const jwt = require("jsonwebtoken"); // Génère un token sécurisé
 const fs = require("fs"); // Permet de gérer les fichiers stockés
 const jwtoken = require("../utils/jwtValidation");
-
+const multer = require("multer");
+const path = require('path');
 // Seuls les caractères spéciaux présents dans la régex suivante sont autorisés :
 const regex = /^[A-Za-z\d\s.,;:!?"()/%-_'éèêëà#@ô^öù*ç€$£≠÷°]*$/;
-const avatartUrl = '../images/avatar2.png';
+// Set The Storage Engine
+const storage = multer.diskStorage({
+  destination: './images/uploads/',
+  filename: function (req, file, cb) {
+    cb(null, file.fieldname + '-' + Date.now() + path.extname(file.originalname));
+  }
+});
 
+// Init Upload
+const upload = multer({
+  storage: storage,
+  limits: { fileSize: 1000000 },
+  fileFilter: function (req, file, cb) {
+    checkFileType(file, cb);
+  }
+}).single('image');
+// Check File Type
+function checkFileType(file, cb) {
+  // Allowed ext
+  const filetypes = /jpeg|jpg|png|gif/;
+  // Check ext
+  const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
+  // Check mime
+  const mimetype = filetypes.test(file.mimetype);
+
+  if (mimetype && extname) {
+    return cb(null, true);
+  } else {
+    cb('Error: Images Only!');
+  }
+}
 // MIDDLEWARE SIGNUP  - Inscription de l'utilisateur et hashage du mot de passe
 exports.signup = (req, res, next) => {
   bcrypt.hash(req.body.password, 10)
@@ -19,13 +49,14 @@ exports.signup = (req, res, next) => {
       const email = req.body.email;
       const name = req.body.name;
       const departement = req.body.departement;
+      const avatarUrl = '../images/avatar2.png';
       const password = hash;
       const newUser = new User({
         name,
         email,
         departement,
         password,
-        avatartUrl: avatartUrl
+        avatarUrl
       });
       const newUserCreated = newUser.save().then(user => {
         if (!user) {
@@ -144,62 +175,72 @@ exports.updateUser = (req, res, next) => {
 }
 
 exports.updateProfilPicture = (req, res, next) => {
-  const image = req.body;
-  console.log(image)
-  if (!image || !req.headers.authorization) {
-    res.status(400).json({ message: "Requête erronée." });
-  } else {
-    const token = jwt.getUserId(req.headers.authorization);
-    const userId = token.userId;
+  upload(req, res, (err) => {
+    if (err) {
+      res.status(400).json({ msg: err });
+    } else {
+      if (req.file == undefined) {
+        res.status(422).json({ msg: 'Error: No File Selected!' });
+      } else {
+        const token = jwtoken.getUserId(req.headers.authorization);
+        const userId = token.userId;
 
-    User.findOne({ where: { id: userId } })
-      .then((user) => {
-        if (user.id === userId) {
-          if (user.avatarUrl) {
-            // Supprimer l'ancienne image du server
-            const filename = user.avatarUrl.split("/images/")[1];
-            fs.unlink(`images/${filename}`, (err) => {
-              if (err) throw err;
-            });
-          }
+        User.findOne({ where: { id: userId } })
+          .then((user) => {
+            if (user.id === userId) {
+              if (user.avatarUrl) {
+                // Supprimer l'ancienne image du server
+                const filename = user.avatarUrl.split("/images/uploads/")[1];
+                fs.unlink(`images/uploads/${filename}`, (err) => {
+                  if (err) {
+                    console.error(err)
+                  };
+                });
+              }
+              User.update(
+                {
+                  avatarUrl: `${req.protocol}://${req.get("host")}/images/uploads/${req.file.filename
+                    }`,
+                  updatedAt: new Date(),
+                },
+                { where: { id: user.id } }
+              ).then(() => {
+                User.findOne({ where: { id: userId } })
+                  .then((user) => res.status(200).json(user))
+                  .catch((error) => res.status(404).json(error));
+              })
+                .catch((error) => res.status(501).json(error));
+            } else {
+              res.status(403).json({ message: "Action non autorisée." });
+            }
+          })
+          .catch((error) => res.status(500).json(error));
+      }
 
-          User.update(
-            {
-              avatarUrl: `${req.protocol}://${req.get("host")}/images/${req.file.filename
-                }`,
-              updatedAt: new Date(),
-            },
-            { where: { id: user.id } }
-          )
-            .then(() => {
-              User.findOne({ where: { id: userId } })
-                .then((user) => res.status(200).json(user))
-                .catch((error) => res.status(404).json(error));
-            })
-            .catch((error) => res.status(501).json(error));
-        } else {
-          res.status(403).json({ message: "Action non autorisée." });
-        }
-      })
-      .catch((error) => res.status(500).json(error));
-  }
-};
 
+    }
+
+
+  });
+
+}
 
 exports.deleteUser = (req, res, next) => {
-  if (!req.params.id || !req.headers.authorization) {
+  const paramsId = req.body.id
+
+  if (!paramsId || !req.headers.authorization) {
     res.status(400).json({ message: "Requête erronée." });
   } else {
-    const token = jwt.getUserId(req.headers.authorization);
+    const token = jwtoken.getUserId(req.headers.authorization);
     const userId = token.userId;
     const isAdmin = token.isAdmin;
 
-    User.findOne({ where: { id: req.params.id } })
+    User.findOne({ where: { id: paramsId } })
       .then((user) => {
         if (user.id == userId || isAdmin) {
-          if (user.imageUrl) {
+          if (user.avatarUrl) {
             // Supprimer la photo de profil du server
-            const filename = user.imageUrl.split("/images/")[1];
+            const filename = user.avatarUrl.split("/images/")[1];
             fs.unlink(`images/${filename}`, () => {
               User.destroy({ where: { id: user.id } })
                 .then(() =>
